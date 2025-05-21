@@ -1,0 +1,56 @@
+"""
+Opik integration for tracing and observability.
+"""
+
+import os
+import logging
+from dotenv import load_dotenv
+import opik
+
+load_dotenv()
+logger = logging.getLogger(__name__)
+
+def setup_opik():
+    """
+    Configure Opik for tracing.
+    
+    Returns:
+        opik object: Configured Opik instance
+    """
+    api_key = os.getenv('OPIK_API_KEY')
+    project_name = os.getenv('OPIK_PROJECT_NAME', 'voices-of-independence')
+    
+    if not api_key:
+        logger.warning("Opik API key not found, using local mode")
+        opik.configure(use_local=True)
+    else:
+        try:
+            opik.configure(
+                api_key=api_key,
+                project_name=project_name,
+                use_local=False
+            )
+            logger.info(f"Opik configured with project: {project_name}")
+        except Exception as e:
+            logger.error(f"Error configuring Opik: {str(e)}")
+            logger.warning("Falling back to local mode")
+            opik.configure(use_local=True)
+    
+    return opik
+
+# Initialize Opik
+opik = setup_opik()
+
+def setup_openai_tracking():
+    """Set up OpenAI client tracking with Opik."""
+    try:
+        from opik.integrations.openai import track_openai
+        track_openai()
+        logger.info("OpenAI tracking configured")
+        return True
+    except ImportError:
+        logger.warning("opik.integrations.openai not available")
+        return False
+    except Exception as e:
+        logger.error(f"Error setting up OpenAI tracking: {str(e)}")
+        return False
